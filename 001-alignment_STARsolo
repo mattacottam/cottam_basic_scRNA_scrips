@@ -1,0 +1,60 @@
+#!/bin/bash
+
+echo "Starting STARsolo pipeline for: $1"
+
+# Barcode files
+#| 10X VERSION |            BC          | UMILEN | STRAND  |
+#|:-----------:|:----------------------:|:------:|:-------:|
+#|    3' v1    |  3M-february-2018.txt  |   10   | Forward |
+#|    3' v2    |  737K-august-2016.txt  |   10   | Forward |
+#| 3' v3, v3.1 |  3M-february-2018.txt  |   12   | Forward |
+#| 5' v1.1, v2 |  737K-august-2016.txt  |   10   | Reverse |
+#|    5' v3    |  737K-august-2016.txt  |   12   | Reverse |
+#|   multiome  |     737K-arc-v1.txt    |   12   | Forward |
+
+# Read 2 first for 10X
+
+SAMPLE=$1                       # Sample name
+SAMPLE_R1="../../fastq/${SAMPLE}_R1_001.fastq"                     # Sample read 1
+SAMPLE_R2="../../fastq/${SAMPLE}_R2_001.fastq"                     # Sample read 2
+UMILEN="12"                      # UMI length
+STRAND="Forward"                 # Strand
+BARCODES="3M-february-2018.txt"  # Barcode white list
+
+# STAR can't zcat files from NTFS, so we have to gunzip them first.
+
+echo "Gunzipping ${SAMPLE_R1}.gz"
+zcat ${SAMPLE_R1}.gz > "../data/raw_tmp/${SAMPLE}_R1.fastq"
+
+echo "Gunzipping ${SAMPLE_R2}.gz"
+zcat ${SAMPLE_R2}.gz > "../data/raw_tmp/${SAMPLE}_R2.fastq"
+
+/mnt/f/STARsolo/2.7.10b/STAR-2.7.10b/bin/Linux_x86_64/STAR \
+  --genomeDir /mnt/f/references/STAR-index/human_hg38 \
+  --readFilesIn "../data/raw_tmp/${SAMPLE}_R2.fastq" "../data/raw_tmp/${SAMPLE}_R1.fastq" \
+  --runThreadN 16 \
+  --soloType CB_UMI_Simple \
+  --soloCBwhitelist /mnt/f/references/10X_barcodes/${BARCODES} \
+  --soloBarcodeReadLength 0 \
+  --soloUMIlen ${UMILEN} \
+  --soloStrand ${STRAND} \
+  --soloUMIdedup 1MM_CR \
+  --soloCBmatchWLtype 1MM_multi_Nbase_pseudocounts \
+  --soloUMIfiltering MultiGeneUMI_CR \
+  --clipAdapterType CellRanger4 \
+  --outFilterScoreMin 30 \
+  --soloCellFilter EmptyDrops_CR \
+  --soloFeatures Gene GeneFull Velocyto \
+  --limitBAMsortRAM 60387207549 \
+  --outFileNamePrefix ../results/001-alignment_STARsolo/${SAMPLE}/ \
+  --outSAMtype BAM SortedByCoordinate \
+  --soloOutFileNames Solo.out/ genes.tsv barcodes.tsv matrix.mtx \
+  --soloMultiMappers EM \
+  > ../log/${SAMPLE}_STARsolo.log
+
+# Remove the unzipped .fastq to restore disk space
+echo "Removing unzipped file: ${SAMPLE_R1}"
+rm "../data/raw_tmp/${SAMPLE}_R1.fastq"
+
+echo "Removing unzipped file: ${SAMPLE_R2}"
+rm "../data/raw_tmp/${SAMPLE}_R2.fastq"
