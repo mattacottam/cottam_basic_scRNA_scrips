@@ -1,0 +1,29 @@
+#!/bin/bash
+
+echo "Log -- Running SpaceRanger"
+echo "Log -- Date: $(date)"
+
+DATA[1]='A1'
+DATA[2]='D1'
+
+SLIDE='V42L05-288'
+
+FASTQPATH[1]='/Fastq/A1/'
+FASTQPATH[2]='/Fastq/D1/'
+
+IMAGEPATH[1]='/Images/A1_microscope.tif'
+IMAGEPATH[2]='/Images/D1_microscope.tif'
+
+CYTIMAGEPATH[1]='/Images/A1_CytAssist.tif'
+CYTIMAGEPATH[2]='/Images/D1_CytAssist.tif'
+
+LOUPE[1]='/Images/A1_cytassist_alignment.json'
+LOUPE[2]='/Images/D1_cytassist_alignment.json'
+
+OUTDIR="results/001-spaceRanger"
+if [ ! -d "$OUTDIR" ]; then
+  mkdir "$OUTDIR"
+  echo "Log -- Created output directory"
+fi
+
+spaceranger-2.1.1/spaceranger count --id=${DATA[$SLURM_ARRAY_TASK_ID]} --transcriptome=References/10xSpaceRanger/refdata-gex-GRCh38-2020-A --probe-set=References/10xSpaceRanger/Visium_Human_Transcriptome_Probe_Set_v2.0_GRCh38-2020-A.csv --fastqs=${FASTQPATH[$SLURM_ARRAY_TASK_ID]} --sample=${DATA[$SLURM_ARRAY_TASK_ID]} --image=${IMAGEPATH[$SLURM_ARRAY_TASK_ID]} --cytaimage=${CYTIMAGEPATH[$SLURM_ARRAY_TASK_ID]} --slide=$SLIDE --area=${DATA[$SLURM_ARRAY_TASK_ID]} --loupe-alignment=${LOUPE[$SLURM_ARRAY_TASK_ID]} --localcores=12 --localmem=232
